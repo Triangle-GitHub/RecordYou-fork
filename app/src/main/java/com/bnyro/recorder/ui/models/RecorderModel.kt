@@ -1,6 +1,7 @@
 package com.bnyro.recorder.ui.models
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ComponentName
@@ -59,6 +60,7 @@ class RecorderModel : ViewModel() {
 
     @SuppressLint("StaticFieldLeak")
     private var recorderService: RecorderService? = null
+    private var reattaching = false
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
@@ -70,14 +72,43 @@ class RecorderModel : ViewModel() {
                 isSaving = saving
                 if (!saving) markSaveDone(name != null, name)
             }
-            (recorderService as? ScreenRecorderService)?.prepare(activityResult!!)
-            if (supportsOverlay) canvasOverlay?.show()
-            recorderService?.start()
+            if (reattaching) {
+                // Activity was recreated while the service kept recording: resume UI state
+                // without restarting the recorder.
+                reattaching = false
+                recorderState = recorderService?.recorderState ?: recorderState
+                startElapsedTimeCounter()
+                handler.postDelayed(this@RecorderModel::updateAmplitude, 100)
+            } else {
+                (recorderService as? ScreenRecorderService)?.prepare(activityResult!!)
+                if (supportsOverlay) canvasOverlay?.show()
+                recorderService?.start()
+            }
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
             recorderService = null
         }
+    }
+
+    /**
+     * Binds to a recorder service that is already running (e.g. the activity was
+     * recreated after a background stay) so the waveform continues to show.
+     */
+    fun attachToRunningRecorder(context: Context) {
+        if (recorderService != null) return
+        val running = listOfNotNull(
+            AudioRecorderService::class.java,
+            LosslessRecorderService::class.java,
+            ScreenRecorderService::class.java
+        ).firstOrNull { isServiceRunning(context, it) } ?: return
+        reattaching = true
+        context.bindService(Intent(context, running), connection, Context.BIND_AUTO_CREATE)
+    }
+
+    private fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
+        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        return manager.getRunningServices(50).any { it.service.className == serviceClass.name }
     }
 
     fun startVideoRecorder(context: Context, result: ActivityResult) {
@@ -151,7 +182,10 @@ class RecorderModel : ViewModel() {
 
     fun stopRecording() {
         val service = recorderService
-        if (service is LosslessRecorderService) {
+        // Only flip the save banner when a recording is actually being stopped;
+        // repeat calls (e.g. RecorderView's state observer after a save finished)
+        // must not leave isSaving stuck on.
+        if (service is LosslessRecorderService && recorderState != RecorderState.IDLE) {
             isSaving = true
         }
         service?.onDestroy()
