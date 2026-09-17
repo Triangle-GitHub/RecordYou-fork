@@ -19,7 +19,7 @@ interface FileRepository {
     suspend fun deleteFiles(files: List<DocumentFile>)
     suspend fun deleteAllFiles()
     fun getOutputFile(extension: String, prefix: String = ""): DocumentFile?
-    fun getUniqueOutputFile(extension: String, prefix: String = ""): DocumentFile?
+    fun getUniqueOutputFile(extension: String, prefix: String = "", timestampMs: Long? = null): DocumentFile?
     fun getOutputDir(): DocumentFile
     fun getOutputDirs(): List<DocumentFile>
 }
@@ -113,13 +113,13 @@ class FileRepositoryImpl(val context: Context) : FileRepository {
      * until the generated name is free. Used when moving a finished recording into the
      * output directory without clobbering a previous (possibly interrupted) write.
      */
-    override fun getUniqueOutputFile(extension: String, prefix: String): DocumentFile? {
+    override fun getUniqueOutputFile(extension: String, prefix: String, timestampMs: Long?): DocumentFile? {
         val outputDir = getOutputDir()
         if (!outputDir.exists() || !outputDir.canWrite()) return null
         var attempt = 0
         while (attempt < 10) {
             val suffix = if (attempt == 0) "" else "${System.currentTimeMillis()}_"
-            val name = buildFileName(extension, "$prefix$suffix")
+            val name = buildFileName(extension, "$prefix$suffix", timestampMs)
             if (outputDir.findFile(name) == null) {
                 return outputDir.createFile("audio/*", name)
             }
@@ -128,8 +128,11 @@ class FileRepositoryImpl(val context: Context) : FileRepository {
         return null
     }
 
-    private fun buildFileName(extension: String, prefix: String): String {
-        val time = Calendar.getInstance().time
+    private fun buildFileName(extension: String, prefix: String, timestampMs: Long? = null): String {
+        // A recording finished later must still be named after the moment it started.
+        val time = Calendar.getInstance().apply {
+            if (timestampMs != null) timeInMillis = timestampMs
+        }.time
         val currentDateTime = dateTimeFormat.format(time)
         val currentDate = currentDateTime.split("_").first()
         val currentTime = currentDateTime.split("_").last()

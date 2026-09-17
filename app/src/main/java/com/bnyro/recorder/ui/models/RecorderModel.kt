@@ -117,6 +117,12 @@ class RecorderModel : ViewModel() {
         return manager.getRunningServices(50).any { it.service.className == serviceClass.name }
     }
 
+    private fun isAnyRecorderRunning(context: Context): Boolean = listOfNotNull(
+        AudioRecorderService::class.java,
+        LosslessRecorderService::class.java,
+        ScreenRecorderService::class.java
+    ).any { isServiceRunning(context, it) }
+
     fun startVideoRecorder(context: Context, result: ActivityResult) {
         activityResult = result
         val serviceIntent = Intent(context, ScreenRecorderService::class.java)
@@ -182,6 +188,7 @@ class RecorderModel : ViewModel() {
         }
         context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
 
+        recordedTime = 0L
         startElapsedTimeCounter()
         startAmplitudeLoop()
     }
@@ -202,7 +209,14 @@ class RecorderModel : ViewModel() {
 
     /** Scans for recordings interrupted by a crash / interrupted save. */
     fun checkPendingRecordings(context: Context) {
-        pendingRecordings = WavFinalizer.findPending(context)
+        // Never offer the recording that is currently running for recovery:
+        // its pending file is written continuously and looks "old" between flushes.
+        val excludePath = if (isAnyRecorderRunning(context)) {
+            Preferences.prefs.getString(Preferences.activePendingRecordKey, null)
+        } else {
+            null
+        }
+        pendingRecordings = WavFinalizer.findPending(context, excludePath)
     }
 
     /** Moves the interrupted recordings into the output directory. */
@@ -255,25 +269,23 @@ class RecorderModel : ViewModel() {
     @RequiresApi(Build.VERSION_CODES.N)
     fun resumeRecording() {
         recorderService?.resume()
-        handler.postDelayed(this::updateTime, 1000)
-        if (recorderService is AudioRecorderService) {
-            handler.postDelayed(this::updateAmplitude, 100)
-        }
     }
 
+    // Both loops always re-post themselves: a single non-ACTIVE tick must never kill
+    // them (that used to freeze the timer and the waveform for good).
     private fun updateTime() {
-        if (recorderState != RecorderState.ACTIVE) return
-
-        recordedTime = recordedTime?.plus(1)
+        if (recorderState == RecorderState.ACTIVE) {
+            recordedTime = recordedTime?.plus(1)
+        }
         handler.postDelayed(this::updateTime, 100)
     }
 
     private fun updateAmplitude() {
-        if (recorderState != RecorderState.ACTIVE) return
-
-        recorderService?.getCurrentAmplitude()?.let {
-            if (recordedAmplitudes.size >= 90) recordedAmplitudes.removeAt(0)
-            recordedAmplitudes.add(it)
+        if (recorderState == RecorderState.ACTIVE) {
+            recorderService?.getCurrentAmplitude()?.let {
+                if (recordedAmplitudes.size >= 90) recordedAmplitudes.removeAt(0)
+                recordedAmplitudes.add(it)
+            }
         }
         handler.postDelayed(this::updateAmplitude, 100)
     }
@@ -281,7 +293,7 @@ class RecorderModel : ViewModel() {
     private fun startElapsedTimeCounter() {
         if (timeLoopRunning) return
         timeLoopRunning = true
-        recordedTime = 0L
+        // The loop only guarantees ticking; the value is set by the callers.
         handler.postDelayed(this::updateTime, 100)
     }
 

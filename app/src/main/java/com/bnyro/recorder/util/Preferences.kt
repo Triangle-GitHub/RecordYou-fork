@@ -28,6 +28,7 @@ object Preferences {
     const val hideFromRecentsKey = "hideFromRecents"
     const val autoBackOnRecordingStartKey = "autoBackOnRecordingStart"
     const val autoRecordOnStartKey = "autoRecordOnStart"
+    const val activePendingRecordKey = "activePendingRecording"
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)

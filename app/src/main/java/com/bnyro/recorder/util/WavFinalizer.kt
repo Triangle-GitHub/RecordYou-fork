@@ -43,8 +43,12 @@ object WavFinalizer {
     fun createPendingFile(context: Context): File =
         File(pendingDir(context), "${PENDING_PREFIX}${System.currentTimeMillis()}.wav")
 
-    /** Finds pending recordings left behind by a crash or an interrupted save. */
-    fun findPending(context: Context): List<PendingRecording> {
+    /**
+     * Finds pending recordings left behind by a crash or an interrupted save.
+     * [excludePath] is the pending file of a still running recording - it must never be
+     * offered for recovery.
+     */
+    fun findPending(context: Context, excludePath: String? = null): List<PendingRecording> {
         val roots = mutableSetOf<File>()
         roots += File(context.filesDir, "tmp")
         context.getExternalFilesDir(null)?.let { roots += File(it, "tmp") }
@@ -56,7 +60,8 @@ object WavFinalizer {
                     file.isFile &&
                         file.name.startsWith(PENDING_PREFIX) &&
                         file.name.endsWith(".wav") &&
-                        file.length() >= PcmConverter.HEADER_SIZE
+                        file.length() >= PcmConverter.HEADER_SIZE &&
+                        file.absolutePath != excludePath
                 } ?: emptyList()
             }
             .sortedByDescending { it.name }
@@ -72,7 +77,9 @@ object WavFinalizer {
     fun finalizeToOutput(context: Context, pending: File, recovered: Boolean = false): DocumentFile? {
         val repo = (context.applicationContext as App).fileRepository
         val outputDir = repo.getOutputDir()
-        val dest = repo.getUniqueOutputFile("wav", if (recovered) RECOVERED_PREFIX else "")
+        // Name the file after the moment the recording started (encoded in the pending name).
+        val startedAt = pending.name.removePrefix(PENDING_PREFIX).removeSuffix(".wav").toLongOrNull()
+        val dest = repo.getUniqueOutputFile("wav", if (recovered) RECOVERED_PREFIX else "", startedAt)
             ?: return null
 
         return try {

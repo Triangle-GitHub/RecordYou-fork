@@ -12,6 +12,7 @@ import com.bnyro.recorder.App
 import com.bnyro.recorder.R
 import com.bnyro.recorder.enums.RecorderState
 import com.bnyro.recorder.util.PcmConverter
+import com.bnyro.recorder.util.Preferences
 import com.bnyro.recorder.util.WavFinalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -81,6 +82,9 @@ class LosslessRecorderService : RecorderService() {
 
         val pending = WavFinalizer.createPendingFile(this)
         pendingFile = pending
+        // Remember which pending file belongs to the running recording so the recovery
+        // scan never mistakes it for an interrupted one.
+        Preferences.edit { putString(Preferences.activePendingRecordKey, pending.absolutePath) }
         try {
             BufferedOutputStream(FileOutputStream(pending), COPY_BUFFER_SIZE).use { out ->
                 pcmConverter.writeHeader(out)
@@ -193,6 +197,8 @@ class LosslessRecorderService : RecorderService() {
                     runCatching { pending?.delete() }
                 }
             }
+            // The recording is no longer pending, whatever the outcome was.
+            Preferences.edit { remove(Preferences.activePendingRecordKey) }
             withContext(Dispatchers.Main) {
                 onSaveStateChanged(false, outputFile?.name)
             }
