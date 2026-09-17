@@ -3,7 +3,6 @@ package com.bnyro.recorder.util
 import android.annotation.SuppressLint
 import android.content.Context
 import android.media.MediaMetadataRetriever
-import android.util.Log
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.bnyro.recorder.enums.RecorderType
@@ -20,6 +19,7 @@ interface FileRepository {
     suspend fun deleteFiles(files: List<DocumentFile>)
     suspend fun deleteAllFiles()
     fun getOutputFile(extension: String, prefix: String = ""): DocumentFile?
+    fun getUniqueOutputFile(extension: String, prefix: String = ""): DocumentFile?
     fun getOutputDir(): DocumentFile
     fun getOutputDirs(): List<DocumentFile>
 }
@@ -99,8 +99,38 @@ class FileRepositoryImpl(val context: Context) : FileRepository {
     }
 
     override fun getOutputFile(extension: String, prefix: String): DocumentFile? {
-        val currentTimeMillis = Calendar.getInstance().time
-        val currentDateTime = dateTimeFormat.format(currentTimeMillis)
+        val outputDir = getOutputDir()
+        if (!outputDir.exists() || !outputDir.canRead() || !outputDir.canWrite()) return null
+
+        val fullFileName = buildFileName(extension, prefix)
+        val existingFile = outputDir.findFile(fullFileName)
+
+        return existingFile ?: outputDir.createFile("audio/*", fullFileName)
+    }
+
+    /**
+     * Like [getOutputFile] but never reuses an existing file: appends a millis suffix
+     * until the generated name is free. Used when moving a finished recording into the
+     * output directory without clobbering a previous (possibly interrupted) write.
+     */
+    override fun getUniqueOutputFile(extension: String, prefix: String): DocumentFile? {
+        val outputDir = getOutputDir()
+        if (!outputDir.exists() || !outputDir.canWrite()) return null
+        var attempt = 0
+        while (attempt < 10) {
+            val suffix = if (attempt == 0) "" else "${System.currentTimeMillis()}_"
+            val name = buildFileName(extension, "$prefix$suffix")
+            if (outputDir.findFile(name) == null) {
+                return outputDir.createFile("audio/*", name)
+            }
+            attempt++
+        }
+        return null
+    }
+
+    private fun buildFileName(extension: String, prefix: String): String {
+        val time = Calendar.getInstance().time
+        val currentDateTime = dateTimeFormat.format(time)
         val currentDate = currentDateTime.split("_").first()
         val currentTime = currentDateTime.split("_").last()
 
@@ -110,18 +140,10 @@ class FileRepositoryImpl(val context: Context) : FileRepository {
         )
             .replace("%d", currentDate)
             .replace("%t", currentTime)
-            .replace("%m", currentTimeMillis.time.toString())
-            .replace("%s", currentTimeMillis.time.div(1000).toString())
+            .replace("%m", time.time.toString())
+            .replace("%s", time.time.div(1000).toString())
 
-        val outputDir = getOutputDir()
-        if (!outputDir.exists() || !outputDir.canRead() || !outputDir.canWrite()) return null
-
-        Log.e("out", Preferences.prefs.getString(Preferences.targetFolderKey, "").toString())
-
-        val fullFileName = "$prefix$fileName.$extension"
-        val existingFile = outputDir.findFile(fullFileName)
-
-        return existingFile ?: outputDir.createFile("audio/*", fullFileName)
+        return "$prefix$fileName.$extension"
     }
 
     override fun getOutputDir(): DocumentFile = getOutputDirs().last()
