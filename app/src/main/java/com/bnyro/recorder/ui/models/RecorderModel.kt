@@ -1,5 +1,6 @@
 package com.bnyro.recorder.ui.models
 
+import android.app.Activity
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ComponentName
@@ -45,6 +46,7 @@ class RecorderModel : ViewModel() {
     var recorderState by mutableStateOf(RecorderState.IDLE)
     var isSaving by mutableStateOf(false)
     var saveDone: SaveOutcome? by mutableStateOf(null)
+    var pendingBannerDismissed by mutableStateOf(false)
     var pendingRecordings by mutableStateOf<List<WavFinalizer.PendingRecording>>(emptyList())
     var recordedTime by mutableStateOf<Long?>(null)
     val recordedAmplitudes = mutableStateListOf<Int>()
@@ -66,7 +68,7 @@ class RecorderModel : ViewModel() {
             }
             recorderService?.onSaveStateChanged = { saving, name ->
                 isSaving = saving
-                if (!saving) markSaveDone(name)
+                if (!saving) markSaveDone(name != null, name)
             }
             (recorderService as? ScreenRecorderService)?.prepare(activityResult!!)
             if (supportsOverlay) canvasOverlay?.show()
@@ -137,6 +139,10 @@ class RecorderModel : ViewModel() {
             }
         }
         ContextCompat.startForegroundService(context, intent)
+
+        if (Preferences.prefs.getBoolean(Preferences.autoBackOnRecordingStartKey, false)) {
+            (context as? Activity)?.moveTaskToBack(true)
+        }
         context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
 
         startElapsedTimeCounter()
@@ -164,6 +170,7 @@ class RecorderModel : ViewModel() {
         val pending = pendingRecordings.toList()
         val appContext = context.applicationContext
         (appContext as App).appScope.launch {
+            isSaving = true
             var saved = 0
             withContext(Dispatchers.IO) {
                 pending.forEach {
@@ -174,16 +181,10 @@ class RecorderModel : ViewModel() {
                 }
             }
             pendingRecordings = emptyList()
-            withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    appContext,
-                    appContext.getString(R.string.saved_pending, saved),
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+            isSaving = false
+            markSaveDone(ok = saved > 0, name = null)
         }
     }
-
     /** Deletes the interrupted recordings. */
     fun discardPendingRecordings(context: Context) {
         val count = pendingRecordings.size
@@ -194,6 +195,15 @@ class RecorderModel : ViewModel() {
             context.getString(R.string.discarded_pending, count),
             Toast.LENGTH_SHORT
         ).show()
+    }
+
+    /** Shows the finished-save banner for a moment, then removes it by itself. */
+    private fun markSaveDone(ok: Boolean, name: String?) {
+        saveDone = SaveOutcome(ok, name)
+        saveDoneRunnable?.let(handler::removeCallbacks)
+        val runnable = Runnable { saveDone = null; saveDoneRunnable = null }
+        saveDoneRunnable = runnable
+        handler.postDelayed(runnable, saveDoneDismissMs)
     }
 
     /** Shows the finished-save banner for a moment, then removes it by itself. */

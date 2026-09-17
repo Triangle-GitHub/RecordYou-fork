@@ -14,18 +14,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -37,7 +40,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -46,8 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bnyro.recorder.App
 import com.bnyro.recorder.R
@@ -56,6 +58,7 @@ import com.bnyro.recorder.enums.RecorderType
 import com.bnyro.recorder.ui.Destination
 import com.bnyro.recorder.ui.common.ClickableIcon
 import com.bnyro.recorder.ui.models.RecorderModel
+import com.bnyro.recorder.util.Preferences
 import com.bnyro.recorder.util.WavFinalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -73,19 +76,24 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val view = LocalView.current
     val context = LocalContext.current
-    var showRecoveryDialog by remember { mutableStateOf(false) }
 
-    // Look for interrupted recordings (crash / interrupted save) and silently repair
-    // any WAV files whose length fields were left stale by an interrupted copy.
+    // Core recording must be usable on the first frame: everything else (pending
+    // scan, WAV self-heal) runs in the background and only surfaces through banners.
     LaunchedEffect(Unit) {
+        if (Preferences.prefs.getBoolean(Preferences.autoRecordOnStartKey, false) &&
+            recorderModel.recorderState == RecorderState.IDLE
+        ) {
+            recorderModel.startAudioRecorder(context)
+        }
         (context.applicationContext as App).appScope.launch {
             withContext(Dispatchers.IO) {
-                WavFinalizer.repairBrokenWavs(context)
+                recorderModel.checkPendingRecordings(context)
             }
-            recorderModel.checkPendingRecordings(context)
             if (!recorderModel.isSaving && recorderModel.pendingRecordings.isNotEmpty()) {
-                showRecoveryDialog = true
+                recorderModel.pendingBannerDismissed = false
             }
+            // Cheap and runs once per process.
+            WavFinalizer.repairBrokenWavs(context)
         }
     }
 
@@ -153,6 +161,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Saving / saved / failed banner - dismisses itself after a moment.
             val saveFeedback = recorderModel.saveDone
             AnimatedVisibility(visible = recorderModel.isSaving || saveFeedback != null) {
                 val ok = saveFeedback?.ok ?: true
@@ -169,7 +178,10 @@ fun HomeScreen(
                 Surface(
                     color = container,
                     contentColor = content,
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -195,10 +207,10 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             val name = saveFeedback?.name
-                            val text = if (ok && name != null) {
-                                stringResource(R.string.saved_recording, name)
-                            } else {
-                                stringResource(R.string.save_failed)
+                            val text = when {
+                                !ok -> stringResource(R.string.save_failed)
+                                name != null -> stringResource(R.string.saved_recording, name)
+                                else -> stringResource(R.string.saved)
                             }
                             Text(
                                 text = text,
@@ -210,6 +222,69 @@ fun HomeScreen(
                     }
                 }
             }
+
+            // Interrupted-recording prompt - stays until saved, deleted or dismissed.
+            if (recorderModel.pendingRecordings.isNotEmpty() && !recorderModel.pendingBannerDismissed) {
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Restore,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        val count = recorderModel.pendingRecordings.size
+                        val totalMb = recorderModel.pendingRecordings.sumOf { it.sizeMb }
+                        Text(
+                            text = stringResource(
+                                R.string.unfinished_recordings_banner,
+                                count,
+                                String.format("%.1f MB", totalMb)
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = {
+                            recorderModel.savePendingRecordings(context)
+                        }) {
+                            Text(stringResource(R.string.save))
+                        }
+                        IconButton(onClick = {
+                            recorderModel.discardPendingRecordings(context)
+                        }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.delete),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        IconButton(onClick = {
+                            recorderModel.pendingBannerDismissed = true
+                        }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(R.string.cancel),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize()
@@ -217,39 +292,5 @@ fun HomeScreen(
                 RecorderView(recordScreenMode = (index == 1))
             }
         }
-    }
-
-    if (showRecoveryDialog && recorderModel.pendingRecordings.isNotEmpty()) {
-        val count = recorderModel.pendingRecordings.size
-        val totalMb = recorderModel.pendingRecordings.sumOf { it.sizeMb }
-        AlertDialog(
-            onDismissRequest = { showRecoveryDialog = false },
-            title = { Text(stringResource(R.string.unfinished_recordings_title)) },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.unfinished_recordings_message,
-                        count,
-                        String.format("%.1f MB", totalMb)
-                    )
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    recorderModel.savePendingRecordings(context)
-                    showRecoveryDialog = false
-                }) {
-                    Text(stringResource(R.string.save))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    recorderModel.discardPendingRecordings(context)
-                    showRecoveryDialog = false
-                }) {
-                    Text(stringResource(R.string.delete))
-                }
-            }
-        )
     }
 }

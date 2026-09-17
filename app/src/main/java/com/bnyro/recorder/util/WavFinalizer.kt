@@ -110,7 +110,10 @@ object WavFinalizer {
      * the actual file size (e.g. a save that was interrupted mid-copy). Cheap and safe:
      * untouched files already carry the correct lengths and are left alone.
      */
+    private val repairedOnce = java.util.concurrent.atomic.AtomicBoolean(false)
+
     fun repairBrokenWavs(context: Context) {
+        if (!repairedOnce.compareAndSet(false, true)) return
         val repo = (context.applicationContext as App).fileRepository
         repo.getOutputDirs().forEach { dir ->
             dir.listFiles()
