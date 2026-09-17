@@ -1,7 +1,29 @@
-<i>Record You</i> is a voice and screen recorder app built with <a href="https://m3.material.io/">Material Design 3 (You)</a>.
+<b>RecordYou-pro is a privacy-first voice and screen recorder that never loses a recording — even if the app crashes.</b>
 
-It supports multiple audio formats and codecs, such as M4A, AAC and OPUS.
+It is a maintained fork of the unmaintained "Record You" app: same privacy guarantees, plus the reliability and convenience features below.
 
-<i>Record You</i> uses SAF (Storage Access Framework), thus it doesn't require any storage permissons.
+<b>Your recording survives a crash</b>
+Lossless recordings are kept as a valid WAV file at every moment (the header is re-sealed every few seconds), so a crash leaves a playable file instead of an unreadable raw dump. The next time you open the app it offers to recover the interrupted recording — save it, delete it or ignore it.
 
-It doesn't have any dependencies apart from the Android base and Material design libraries, therefore the app is very lightweight.
+<b>Saving is instant and never blocks you</b>
+Saving just seals the header and moves the file, so long recordings stop instantly and are written in the background. A small banner shows progress and the result, and you can start the next recording right away.
+
+<b>Behaviour switches</b>
+<br>• Tap anywhere to record (the record button is hidden)
+<br>• Keep recording when the app is swiped away
+<br>• Hide the app from background tasks
+<br>• Go to the desktop right after a recording starts
+<br>• Start recording automatically when the app opens
+
+<b>Everything the original did</b>
+<br>• Lossless WAV recording, plus M4A, AAC, 3GP and OPUS
+<br>• Screen recording (H.264, H.265, VP8, VP9) with an annotation overlay
+<br>• Pause and resume, live waveform, timer, built-in player and lossless trimmer
+<br>• Choose any output folder (SAF), custom file naming patterns
+<br>• Material Design 3 with dynamic colour and dark theme
+
+<b>Privacy</b>
+No ads, no trackers, and the app declares no INTERNET permission at all — nothing can leave your device.
+
+<b>Note</b>
+Removing the app from the recent-tasks list stops the recording unless you enable the matching switch; a few aggressive vendor task killers may stop recordings anyway.

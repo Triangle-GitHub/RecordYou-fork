@@ -1,1 +1,1 @@
-Privacy focused voice and screen recorder app build with MD3
+Privacy-first voice & screen recorder. Crash-safe WAV, offline, no ads.

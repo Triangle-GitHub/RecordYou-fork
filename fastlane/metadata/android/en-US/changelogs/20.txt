@@ -1,0 +1,6 @@
+First RecordYou-pro release.
+
+• Crash-proof lossless WAV recordings: an interrupted recording stays a playable file and can be recovered on the next app start
+• Stopping a recording is instant; saving happens in the background with an in-UI progress banner
+• New switches: tap anywhere to record, keep recording when swiped away, hide from background tasks, go to desktop after recording starts, auto-record on app open
+• Reliability fixes: timer/waveform stay correct after the app returns from the background, save banner no longer gets stuck, no false "unfinished recording" prompts
