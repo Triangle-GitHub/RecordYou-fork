@@ -21,11 +21,11 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.bnyro.recorder"
+        applicationId = "com.recordyou.pro"
         minSdk = 21
         targetSdk = 34
         versionCode = 20
-        versionName = "8.1"
+        versionName = "9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
