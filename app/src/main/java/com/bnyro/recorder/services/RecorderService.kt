@@ -27,6 +27,7 @@ import com.bnyro.recorder.receivers.FinishedNotificationReceiver
 import com.bnyro.recorder.ui.MainActivity
 import com.bnyro.recorder.util.NotificationHelper
 import com.bnyro.recorder.util.PermissionHelper
+import com.bnyro.recorder.util.Preferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -245,6 +246,14 @@ abstract class RecorderService : LifecycleService() {
         stopSelf()
 
         super.onDestroy()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Swiping the app away stops the recording unless the user opted to keep it running.
+        if (!Preferences.prefs.getBoolean(Preferences.keepRecordingOnTaskRemoveKey, false)) {
+            onDestroy()
+        }
+        super.onTaskRemoved(rootIntent)
     }
 
     @SuppressLint("MissingPermission")

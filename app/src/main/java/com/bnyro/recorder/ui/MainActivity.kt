@@ -1,6 +1,7 @@
 package com.bnyro.recorder.ui
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
@@ -22,6 +23,7 @@ import com.bnyro.recorder.enums.ThemeMode
 import com.bnyro.recorder.ui.models.RecorderModel
 import com.bnyro.recorder.ui.models.ThemeModel
 import com.bnyro.recorder.ui.theme.RecordYouTheme
+import com.bnyro.recorder.util.Preferences
 
 class MainActivity : ComponentActivity() {
     private var initialRecorder = RecorderType.NONE
@@ -103,6 +105,22 @@ class MainActivity : ComponentActivity() {
         if (exitAfterRecordingStart) {
             exitAfterRecordingStart = false
             moveTaskToBack(true)
+        }
+        applyRecentsVisibility()
+    }
+
+    /**
+     * Best-effort hiding from recents (same approach as GKD): the flag has no public
+     * setter, so it is invoked reflectively and quietly ignored where unavailable.
+     */
+    private fun applyRecentsVisibility() {
+        if (!Preferences.prefs.getBoolean(Preferences.hideFromRecentsKey, false)) return
+        runCatching {
+            val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val task = manager.appTasks.firstOrNull() ?: return@runCatching
+            task.javaClass
+                .getMethod("setExcludeFromRecents", Boolean::class.java)
+                .invoke(task, true)
         }
     }
 
