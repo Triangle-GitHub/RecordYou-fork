@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
             getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
 
         processIntent(intent)
+        recorderModel.attachToRunningRecorder(this)
         enableEdgeToEdge()
 
         setContent {
