@@ -45,11 +45,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bnyro.recorder.App
 import com.bnyro.recorder.R
@@ -97,8 +103,22 @@ fun HomeScreen(
         }
     }
 
+    val appTitle = buildAnnotatedString {
+        append(stringResource(R.string.app_name).substringBefore("-pro"))
+        pushStyle(
+            SpanStyle(
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0x80D4AF37),
+                baselineShift = BaselineShift.Superscript
+            )
+        )
+        append("PRO")
+        pop()
+    }
+
     Scaffold(modifier = Modifier.fillMaxSize(), topBar = {
-        TopAppBar(title = { Text(stringResource(R.string.app_name)) }, actions = {
+        TopAppBar(title = { Text(appTitle) }, actions = {
             ClickableIcon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = stringResource(R.string.settings)
