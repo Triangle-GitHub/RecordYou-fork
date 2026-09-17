@@ -40,6 +40,7 @@ abstract class RecorderService : LifecycleService() {
     var outputFile: DocumentFile? = null
 
     var onRecorderStateChanged: (RecorderState) -> Unit = {}
+    var onSaveStateChanged: (Boolean) -> Unit = {}
     open val fgServiceType: Int? = null
     var recorderState: RecorderState = RecorderState.IDLE
     private lateinit var audioManager: AudioManager
@@ -203,36 +204,46 @@ abstract class RecorderService : LifecycleService() {
             onRecorderStateChanged(recorderState)
         }
 
+        cancelRecordingNotification()
+
+        lifecycleScope.launch { cleanupAndStop() }
+    }
+
+    protected fun cancelRecordingNotification() {
         NotificationManagerCompat.from(this)
             .cancel(NotificationHelper.RECORDING_NOTIFICATION_ID)
+    }
 
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                recorder?.runCatching {
-                    stop()
-                    release()
-                }
-                recorder = null
-                fileDescriptor?.close()
+    /**
+     * Final cleanup after a recording ended: releases the recorder, posts the finished
+     * notification, tears down the foreground state and stops the service.
+     */
+    protected suspend fun cleanupAndStop() {
+        withContext(Dispatchers.IO) {
+            recorder?.runCatching {
+                stop()
+                release()
             }
-
-            createRecordingFinishedNotification()
-            outputFile = null
-
-            runCatching {
-                unregisterReceiver(recorderReceiver)
-            }
-
-            runCatching {
-                audioManager.stopBluetoothSco()
-                unregisterReceiver(bluetoothReceiver)
-            }
-
-            ServiceCompat.stopForeground(this@RecorderService, ServiceCompat.STOP_FOREGROUND_REMOVE)
-            stopSelf()
-
-            super.onDestroy()
+            recorder = null
+            fileDescriptor?.close()
         }
+
+        createRecordingFinishedNotification()
+        outputFile = null
+
+        runCatching {
+            unregisterReceiver(recorderReceiver)
+        }
+
+        runCatching {
+            audioManager.stopBluetoothSco()
+            unregisterReceiver(bluetoothReceiver)
+        }
+
+        ServiceCompat.stopForeground(this@RecorderService, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
+
+        super.onDestroy()
     }
 
     @SuppressLint("MissingPermission")
