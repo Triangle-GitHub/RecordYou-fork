@@ -86,4 +86,6 @@
     <string name="save">保存</string>
     <string name="saved_pending">已保存 %1$d 个录音</string>
     <string name="discarded_pending">已删除 %1$d 个未完成的录音</string>
+    <string name="saved_recording">已保存：%1$s</string>
+    <string name="save_failed">保存失败</string>
 </resources>

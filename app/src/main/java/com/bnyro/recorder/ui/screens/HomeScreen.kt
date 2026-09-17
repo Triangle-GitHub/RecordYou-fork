@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bnyro.recorder.App
 import com.bnyro.recorder.R
@@ -150,10 +153,22 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            AnimatedVisibility(visible = recorderModel.isSaving) {
+            val saveFeedback = recorderModel.saveDone
+            AnimatedVisibility(visible = recorderModel.isSaving || saveFeedback != null) {
+                val ok = saveFeedback?.ok ?: true
+                val container = if (ok) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.errorContainer
+                }
+                val content = if (ok) {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onErrorContainer
+                }
                 Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    color = container,
+                    contentColor = content,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -162,15 +177,36 @@ fun HomeScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = stringResource(R.string.saving_recording),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        if (recorderModel.isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = stringResource(R.string.saving_recording),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (ok) Icons.Default.Check else Icons.Default.Error,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            val name = saveFeedback?.name
+                            val text = if (ok && name != null) {
+                                stringResource(R.string.saved_recording, name)
+                            } else {
+                                stringResource(R.string.save_failed)
+                            }
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }

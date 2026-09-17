@@ -171,7 +171,7 @@ class LosslessRecorderService : RecorderService() {
             onRecorderStateChanged(recorderState)
         }
         cancelRecordingNotification()
-        onSaveStateChanged(true)
+        onSaveStateChanged(true, null)
 
         audioRecorder?.stop()
         audioRecorder?.release()
@@ -193,7 +193,9 @@ class LosslessRecorderService : RecorderService() {
                     runCatching { pending?.delete() }
                 }
             }
-            onSaveStateChanged(false)
+            withContext(Dispatchers.Main) {
+                onSaveStateChanged(false, outputFile?.name)
+            }
             cleanupAndStop()
         }
     }

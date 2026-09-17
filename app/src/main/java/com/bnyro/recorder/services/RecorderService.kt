@@ -40,7 +40,8 @@ abstract class RecorderService : LifecycleService() {
     var outputFile: DocumentFile? = null
 
     var onRecorderStateChanged: (RecorderState) -> Unit = {}
-    var onSaveStateChanged: (Boolean) -> Unit = {}
+    /** saving=false with a name reports a finished save; null name means the save failed. */
+    var onSaveStateChanged: (Boolean, String?) -> Unit = { _, _ -> }
     open val fgServiceType: Int? = null
     var recorderState: RecorderState = RecorderState.IDLE
     private lateinit var audioManager: AudioManager

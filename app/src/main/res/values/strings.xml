@@ -93,4 +93,6 @@
     <string name="save">Save</string>
     <string name="saved_pending">Saved %1$d recording(s)</string>
     <string name="discarded_pending">Deleted %1$d unfinished recording(s)</string>
+    <string name="saved_recording">Saved: %1$s</string>
+    <string name="save_failed">Saving failed</string>
 </resources>
