@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Record You</string>
+    <string name="app_name" translatable="false">RecordYou-pro</string>
     <string name="recordings">Recordings</string>
     <string name="okay">Okay</string>
     <string name="cancel">Cancel</string>
@@ -95,4 +95,16 @@
     <string name="discarded_pending">Deleted %1$d unfinished recording(s)</string>
     <string name="saved_recording">Saved: %1$s</string>
     <string name="save_failed">Saving failed</string>
+    <string name="saved">Saved</string>
+    <string name="center_tap_record">Tap anywhere to record</string>
+    <string name="center_tap_record_desc">Hide the record button; tap the center of the screen to start recording</string>
+    <string name="keep_recording_on_task_remove">Keep recording when swiped away</string>
+    <string name="keep_recording_on_task_remove_desc">Recording continues even if the app is removed from recents.</string>
+    <string name="hide_from_recents">Hide app from background tasks</string>
+    <string name="hide_from_recents_desc">Best-effort; may not work on every device.</string>
+    <string name="auto_record_on_start">Auto start recording on app open</string>
+    <string name="auto_record_on_start_desc">Starts immediately when the app opens. Cannot be combined with \'Go to desktop\'.</string>
+    <string name="auto_back_on_record_start">Go to desktop after recording starts</string>
+    <string name="auto_back_on_record_start_desc">Moves the app to the background as soon as a recording starts.</string>
+    <string name="unfinished_recordings_banner">%1$d unfinished recording(s) (%2$s)</string>
 </resources>

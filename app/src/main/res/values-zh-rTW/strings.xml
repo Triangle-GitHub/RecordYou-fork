@@ -88,4 +88,16 @@
     <string name="discarded_pending">已刪除 %1$d 個未完成的錄音</string>
     <string name="saved_recording">已儲存：%1$s</string>
     <string name="save_failed">儲存失敗</string>
+    <string name="saved">已儲存</string>
+    <string name="center_tap_record">點擊螢幕任意位置錄製</string>
+    <string name="center_tap_record_desc">隱藏錄製按鈕，點擊螢幕中間區域開始錄製</string>
+    <string name="keep_recording_on_task_remove">從背景任務滑掉後繼續錄製</string>
+    <string name="keep_recording_on_task_remove_desc">應用從最近任務中移除後錄音仍將繼續。</string>
+    <string name="hide_from_recents">不顯示在背景任務中</string>
+    <string name="hide_from_recents_desc">盡力而為，部分裝置可能無效。</string>
+    <string name="auto_record_on_start">開啟應用自動錄音</string>
+    <string name="auto_record_on_start_desc">開啟應用即開始錄音，不能與「回到桌面」同時啟用。</string>
+    <string name="auto_back_on_record_start">開始錄製後回到桌面</string>
+    <string name="auto_back_on_record_start_desc">開始錄製後立即將應用切到背景。</string>
+    <string name="unfinished_recordings_banner">%1$d 個未完成的錄音（%2$s）</string>
 </resources>

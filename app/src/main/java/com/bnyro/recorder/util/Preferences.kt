@@ -22,6 +22,13 @@ object Preferences {
     const val showOverlayAnnotationToolKey = "annotationTool"
     const val showVisualizerTimestamps = "visualizerTimestamp"
 
+    // Recording behaviour switches
+    const val centerTapRecordKey = "centerTapRecord"
+    const val keepRecordingOnTaskRemoveKey = "keepRecordingOnTaskRemove"
+    const val hideFromRecentsKey = "hideFromRecents"
+    const val autoBackOnRecordingStartKey = "autoBackOnRecordingStart"
+    const val autoRecordOnStartKey = "autoRecordOnStart"
+
     fun init(context: Context) {
         prefs = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
     }

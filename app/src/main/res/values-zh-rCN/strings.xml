@@ -88,4 +88,16 @@
     <string name="discarded_pending">已删除 %1$d 个未完成的录音</string>
     <string name="saved_recording">已保存：%1$s</string>
     <string name="save_failed">保存失败</string>
+    <string name="saved">已保存</string>
+    <string name="center_tap_record">点击屏幕任意位置录制</string>
+    <string name="center_tap_record_desc">隐藏录制按钮，点击屏幕中间区域开始录制</string>
+    <string name="keep_recording_on_task_remove">从后台任务划掉后继续录制</string>
+    <string name="keep_recording_on_task_remove_desc">应用从最近任务中移除后录音仍将继续。</string>
+    <string name="hide_from_recents">不出现在后台任务中</string>
+    <string name="hide_from_recents_desc">尽力而为，部分设备可能无效。</string>
+    <string name="auto_record_on_start">打开应用自动录音</string>
+    <string name="auto_record_on_start_desc">打开应用即开始录音，不能与「回到桌面」同时启用。</string>
+    <string name="auto_back_on_record_start">开始录制后回到桌面</string>
+    <string name="auto_back_on_record_start_desc">开始录制后立即将应用切到后台。</string>
+    <string name="unfinished_recordings_banner">%1$d 个未完成的录音（%2$s）</string>
 </resources>

@@ -260,6 +260,46 @@ fun SettingsScreen() {
             )
             Spacer(modifier = Modifier.height(10.dp))
             NamingPatternPref()
+            Spacer(modifier = Modifier.height(10.dp))
+            CheckboxPref(
+                prefKey = Preferences.centerTapRecordKey,
+                title = stringResource(R.string.center_tap_record),
+                summary = stringResource(R.string.center_tap_record_desc)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            CheckboxPref(
+                prefKey = Preferences.keepRecordingOnTaskRemoveKey,
+                title = stringResource(R.string.keep_recording_on_task_remove),
+                summary = stringResource(R.string.keep_recording_on_task_remove_desc)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            CheckboxPref(
+                prefKey = Preferences.hideFromRecentsKey,
+                title = stringResource(R.string.hide_from_recents),
+                summary = stringResource(R.string.hide_from_recents_desc)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            CheckboxPref(
+                prefKey = Preferences.autoRecordOnStartKey,
+                title = stringResource(R.string.auto_record_on_start),
+                summary = stringResource(R.string.auto_record_on_start_desc),
+                onCheckedChange = { checked ->
+                    if (checked) {
+                        Preferences.edit { putBoolean(Preferences.autoBackOnRecordingStartKey, false) }
+                    }
+                }
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            CheckboxPref(
+                prefKey = Preferences.autoBackOnRecordingStartKey,
+                title = stringResource(R.string.auto_back_on_record_start),
+                summary = stringResource(R.string.auto_back_on_record_start_desc),
+                onCheckedChange = { checked ->
+                    if (checked) {
+                        Preferences.edit { putBoolean(Preferences.autoRecordOnStartKey, false) }
+                    }
+                }
+            )
         }
     }
 
