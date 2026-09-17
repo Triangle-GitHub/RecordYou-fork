@@ -13,6 +13,7 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -45,6 +46,7 @@ abstract class RecorderService : LifecycleService() {
     var onSaveStateChanged: (Boolean, String?) -> Unit = { _, _ -> }
     open val fgServiceType: Int? = null
     var recorderState: RecorderState = RecorderState.IDLE
+    private var startRealtime = 0L
     private lateinit var audioManager: AudioManager
 
     private val recorderReceiver = object : BroadcastReceiver() {
@@ -173,11 +175,21 @@ abstract class RecorderService : LifecycleService() {
         )
 
     open fun start() {
+        startRealtime = SystemClock.elapsedRealtime()
         runCatching {
             recorderState = RecorderState.ACTIVE
             onRecorderStateChanged(recorderState)
         }
         updateNotification()
+    }
+
+    /** Approximate elapsed recording time, used to resync the UI after a reconnect. */
+    fun getElapsedSeconds(): Long {
+        return if (startRealtime > 0) {
+            (SystemClock.elapsedRealtime() - startRealtime) / 1000
+        } else {
+            0
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.N)

@@ -109,7 +109,7 @@ fun HomeScreen(
             SpanStyle(
                 fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0x80D4AF37),
+                color = Color(0x99D4AF37),
                 baselineShift = BaselineShift.Superscript
             )
         )

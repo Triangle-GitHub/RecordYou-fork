@@ -108,6 +108,7 @@ class MainActivity : ComponentActivity() {
             moveTaskToBack(true)
         }
         applyRecentsVisibility()
+        recorderModel.onAppResumed(this)
     }
 
     /**

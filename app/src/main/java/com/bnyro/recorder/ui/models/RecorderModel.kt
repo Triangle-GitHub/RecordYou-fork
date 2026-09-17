@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.widget.Toast
+import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
@@ -57,6 +58,9 @@ class RecorderModel : ViewModel() {
     private val handler = Handler(Looper.getMainLooper())
     private var saveDoneRunnable: Runnable? = null
     private val saveDoneDismissMs = 3_000L
+    private var timeLoopRunning = false
+    private var amplitudeLoopRunning = false
+    private val tag = "RecorderModel"
 
     @SuppressLint("StaticFieldLeak")
     private var recorderService: RecorderService? = null
@@ -77,8 +81,10 @@ class RecorderModel : ViewModel() {
                 // without restarting the recorder.
                 reattaching = false
                 recorderState = recorderService?.recorderState ?: recorderState
+                // Resume the real elapsed time instead of restarting from 0:00.
+                recordedTime = (recorderService?.getElapsedSeconds() ?: 0L) * 10
                 startElapsedTimeCounter()
-                handler.postDelayed(this@RecorderModel::updateAmplitude, 100)
+                startAmplitudeLoop()
             } else {
                 (recorderService as? ScreenRecorderService)?.prepare(activityResult!!)
                 if (supportsOverlay) canvasOverlay?.show()
@@ -177,7 +183,7 @@ class RecorderModel : ViewModel() {
         context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
 
         startElapsedTimeCounter()
-        handler.postDelayed(this::updateAmplitude, 100)
+        startAmplitudeLoop()
     }
 
     fun stopRecording() {
@@ -240,14 +246,6 @@ class RecorderModel : ViewModel() {
         handler.postDelayed(runnable, saveDoneDismissMs)
     }
 
-    /** Shows the finished-save banner for a moment, then removes it by itself. */
-    private fun markSaveDone(name: String?) {
-        saveDone = SaveOutcome(ok = name != null, name = name)
-        saveDoneRunnable?.let(handler::removeCallbacks)
-        val runnable = Runnable { saveDone = null; saveDoneRunnable = null }
-        saveDoneRunnable = runnable
-        handler.postDelayed(runnable, saveDoneDismissMs)
-    }
 
     @RequiresApi(Build.VERSION_CODES.N)
     fun pauseRecording() {
@@ -277,13 +275,45 @@ class RecorderModel : ViewModel() {
             if (recordedAmplitudes.size >= 90) recordedAmplitudes.removeAt(0)
             recordedAmplitudes.add(it)
         }
-
         handler.postDelayed(this::updateAmplitude, 100)
     }
 
     private fun startElapsedTimeCounter() {
+        if (timeLoopRunning) return
+        timeLoopRunning = true
         recordedTime = 0L
         handler.postDelayed(this::updateTime, 100)
+    }
+
+    private fun startAmplitudeLoop() {
+        if (amplitudeLoopRunning) return
+        amplitudeLoopRunning = true
+        handler.postDelayed(this::updateAmplitude, 100)
+    }
+
+    /**
+     * Called on every foreground entry: re-attach if unbounded and resync the
+     * timer/amplitude loops with the actual recording state (covers activity
+     * recreation and process restarts after a background stay).
+     */
+    fun onAppResumed(context: Context) {
+        if (recorderService == null) attachToRunningRecorder(context)
+        val service = recorderService ?: return
+        val actual = service.recorderState
+        Log.d(tag, "onAppResumed: bound service state=$actual")
+        if (actual == RecorderState.IDLE) {
+            if (recorderState != RecorderState.IDLE) recorderState = RecorderState.IDLE
+            return
+        }
+        if (recorderState != actual) recorderState = actual
+        // Timer: keep the real elapsed time instead of restarting from 0:00.
+        val expected = service.getElapsedSeconds() * 10
+        val current = recordedTime
+        if (current == null || current < expected - 30) {
+            recordedTime = expected
+        }
+        startElapsedTimeCounter()
+        startAmplitudeLoop()
     }
 
     @SuppressLint("NewApi")
