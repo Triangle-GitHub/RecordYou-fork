@@ -5,6 +5,7 @@ import android.content.Context
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.text.format.DateUtils
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -106,7 +107,10 @@ fun RecorderController(
                 IconButton(
                     onClick = {
                         when {
-                            recorderModel.recorderState != RecorderState.IDLE -> recorderModel.stopRecording()
+                            recorderModel.recorderState != RecorderState.IDLE -> {
+                                Toast.makeText(context, R.string.saving_recording, Toast.LENGTH_SHORT).show()
+                                recorderModel.stopRecording()
+                            }
                             recordScreenMode -> requestScreenRecording()
                             else -> recorderModel.startAudioRecorder(context)
                         }

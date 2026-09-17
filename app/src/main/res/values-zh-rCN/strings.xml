@@ -80,4 +80,10 @@
     <string name="modified_rev">修改日期（倒序）</string>
     <string name="internal_audio">内部音频（Root）</string>
     <string name="no_sufficient_permissions">没有足够的权限开始录制</string>
+    <string name="saving_recording">正在保存……</string>
+    <string name="unfinished_recordings_title">未完成的录音</string>
+    <string name="unfinished_recordings_message">发现 %1$d 个未完成的录音（共 %2$s）。要保存到你的录音中吗？</string>
+    <string name="save">保存</string>
+    <string name="saved_pending">已保存 %1$d 个录音</string>
+    <string name="discarded_pending">已删除 %1$d 个未完成的录音</string>
 </resources>

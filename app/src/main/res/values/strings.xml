@@ -87,4 +87,10 @@
     <string name="erase_mode">Erase Mode</string>
     <string name="internal_audio">Internal Audio (Root)</string>
     <string name="no_sufficient_permissions">No sufficient permissions to start recording</string>
+    <string name="saving_recording">Saving recording…</string>
+    <string name="unfinished_recordings_title">Unfinished recording</string>
+    <string name="unfinished_recordings_message">%1$d unfinished recording(s) found (%2$s). Save them to your recordings?</string>
+    <string name="save">Save</string>
+    <string name="saved_pending">Saved %1$d recording(s)</string>
+    <string name="discarded_pending">Deleted %1$d unfinished recording(s)</string>
 </resources>
