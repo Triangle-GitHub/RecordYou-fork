@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
+import com.bnyro.recorder.App
 import com.bnyro.recorder.R
 import com.bnyro.recorder.canvas_overlay.CanvasOverlay
 import com.bnyro.recorder.enums.AudioDeviceSource
@@ -30,11 +31,17 @@ import com.bnyro.recorder.services.RecorderService
 import com.bnyro.recorder.services.ScreenRecorderService
 import com.bnyro.recorder.util.PermissionHelper
 import com.bnyro.recorder.util.Preferences
+import com.bnyro.recorder.util.WavFinalizer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class RecorderModel : ViewModel() {
     private val supportsOverlay = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
 
     var recorderState by mutableStateOf(RecorderState.IDLE)
+    var isSaving by mutableStateOf(false)
+    var pendingRecordings by mutableStateOf<List<WavFinalizer.PendingRecording>>(emptyList())
     var recordedTime by mutableStateOf<Long?>(null)
     val recordedAmplitudes = mutableStateListOf<Int>()
     private var activityResult: ActivityResult? = null
@@ -50,6 +57,9 @@ class RecorderModel : ViewModel() {
             recorderService = (service as RecorderService.LocalBinder).getService()
             recorderService?.onRecorderStateChanged = {
                 recorderState = it
+            }
+            recorderService?.onSaveStateChanged = {
+                isSaving = it
             }
             (recorderService as? ScreenRecorderService)?.prepare(activityResult!!)
             if (supportsOverlay) canvasOverlay?.show()
@@ -127,10 +137,50 @@ class RecorderModel : ViewModel() {
     }
 
     fun stopRecording() {
-        recorderService?.onDestroy()
+        val service = recorderService
+        if (service is LosslessRecorderService) {
+            isSaving = true
+        }
+        service?.onDestroy()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) canvasOverlay?.remove()
         recordedTime = null
         recordedAmplitudes.clear()
+    }
+
+    /** Scans for recordings interrupted by a crash / interrupted save. */
+    fun checkPendingRecordings(context: Context) {
+        pendingRecordings = WavFinalizer.findPending(context)
+    }
+
+    /** Moves the interrupted recordings into the output directory. */
+    fun savePendingRecordings(context: Context) {
+        val pending = pendingRecordings.toList()
+        (context.applicationContext as App).appScope.launch {
+            var saved = 0
+            withContext(Dispatchers.IO) {
+                pending.forEach {
+                    if (WavFinalizer.finalizeToOutput(context, it.file, recovered = true) != null) saved++
+                }
+            }
+            pendingRecordings = emptyList()
+            Toast.makeText(
+                context,
+                context.getString(R.string.saved_pending, saved),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    /** Deletes the interrupted recordings. */
+    fun discardPendingRecordings(context: Context) {
+        val count = pendingRecordings.size
+        pendingRecordings.forEach { WavFinalizer.discardPending(it.file) }
+        pendingRecordings = emptyList()
+        Toast.makeText(
+            context,
+            context.getString(R.string.discarded_pending, count),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
