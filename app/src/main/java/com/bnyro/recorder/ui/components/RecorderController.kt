@@ -1,15 +1,10 @@
 package com.bnyro.recorder.ui.components
 
-import android.app.Activity
-import android.content.Context
-import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.text.format.DateUtils
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,29 +40,19 @@ import com.bnyro.recorder.R
 import com.bnyro.recorder.enums.RecorderState
 import com.bnyro.recorder.ui.common.ClickableIcon
 import com.bnyro.recorder.ui.models.RecorderModel
+import com.bnyro.recorder.util.Preferences
 
 @Composable
 fun RecorderController(
-    recordScreenMode: Boolean
+    onStartRecording: () -> Unit
 ) {
     val recorderModel: RecorderModel = viewModel(LocalContext.current as ComponentActivity)
-    val context = LocalContext.current
-    val mProjectionManager =
-        context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
 
-    val requestRecording = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
-        recorderModel.startVideoRecorder(context, result)
-    }
+    // With "tap anywhere to record" the record button is hidden on the idle page only;
+    // once a recording runs the original stop/pause arrangement is shown again.
+    val hideRecordButton = recorderModel.recorderState == RecorderState.IDLE &&
+        Preferences.prefs.getBoolean(Preferences.centerTapRecordKey, false)
 
-    fun requestScreenRecording() {
-        if (!recorderModel.hasScreenRecordingPermissions(context)) return
-        requestRecording.launch(
-            mProjectionManager.createScreenCaptureIntent()
-        )
-    }
     Column(
         modifier = Modifier.wrapContentSize(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -83,60 +68,62 @@ fun RecorderController(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ElevatedCard(
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = if (isSystemInDarkTheme()) {
-                        Color(0xA8EE665B)
-                    } else {
-                        Color(
-                            0xffdd6f62
-                        )
-                    },
-                    contentColor = Color.White
-                ),
-                shape = CircleShape
-            ) {
-                val buttonDescription = stringResource(
-                    if (recorderModel.recorderState != RecorderState.IDLE) {
-                        R.string.stop
-                    } else {
-                        R.string.record
-                    }
-                )
-                IconButton(
-                    onClick = {
-                        when {
-                            recorderModel.recorderState != RecorderState.IDLE -> recorderModel.stopRecording()
-                            recordScreenMode -> requestScreenRecording()
-                            else -> recorderModel.startAudioRecorder(context)
-                        }
-                    },
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .semantics { contentDescription = buttonDescription }
+            if (!hideRecordButton) {
+                ElevatedCard(
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = if (isSystemInDarkTheme()) {
+                            Color(0xA8EE665B)
+                        } else {
+                            Color(
+                                0xffdd6f62
+                            )
+                        },
+                        contentColor = Color.White
+                    ),
+                    shape = CircleShape
                 ) {
-                    when {
-                        recorderModel.recorderState != RecorderState.IDLE -> {
-                            Icon(
-                                Icons.Default.Stop,
-                                modifier = Modifier.size(36.dp),
-                                contentDescription = stringResource(R.string.pause)
-                            )
+                    val buttonDescription = stringResource(
+                        if (recorderModel.recorderState != RecorderState.IDLE) {
+                            R.string.stop
+                        } else {
+                            R.string.record
                         }
+                    )
+                    IconButton(
+                        onClick = {
+                            if (recorderModel.recorderState != RecorderState.IDLE) {
+                                recorderModel.stopRecording()
+                            } else {
+                                onStartRecording()
+                            }
+                        },
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .semantics { contentDescription = buttonDescription }
+                    ) {
+                        when {
+                            recorderModel.recorderState != RecorderState.IDLE -> {
+                                Icon(
+                                    Icons.Default.Stop,
+                                    modifier = Modifier.size(36.dp),
+                                    contentDescription = stringResource(R.string.pause)
+                                )
+                            }
 
-                        else -> {
-                            Box(
-                                Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0x9FFFFFFF))
-                            )
-                            Box(
-                                Modifier
-                                    .size(26.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0x9FFFFFFF))
-                            )
+                            else -> {
+                                Box(
+                                    Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0x9FFFFFFF))
+                                )
+                                Box(
+                                    Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0x9FFFFFFF))
+                                )
+                            }
                         }
                     }
                 }
